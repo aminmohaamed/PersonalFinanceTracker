@@ -1,0 +1,140 @@
+@model PersonalFinanceTracker.ViewModels.BudgetListViewModel
+@{
+    ViewBag.Title = "Budget Management";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!-- Month/Year Selector -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-alt"></i> 
+                    @System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(Model.CurrentMonth) @Model.CurrentYear
+                </h5>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="@Url.Action("Create", "Budget")" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Create Budget
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Budget Summary -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Total Budget</h6>
+                <h2 class="text-primary mb-0">${@Model.TotalBudget.ToString("N2")}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Total Spent</h6>
+                <h2 class="@(Model.TotalSpent > Model.TotalBudget ? "text-danger" : "text-success") mb-0">
+                    $@Model.TotalSpent.ToString("N2")
+                </h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Budget Items -->
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-tasks"></i> Budget Details
+    </div>
+    <div class="card-body">
+        @if (Model.Budgets.Any())
+        {
+            foreach (var budget in Model.Budgets)
+            {
+                <div class="card mb-3" style="border-left: 4px solid @budget.ColorCode;">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <h5 class="mb-0">
+                                    <i class="fas @budget.CategoryIcon" style="color: @budget.ColorCode;"></i>
+                                    @budget.CategoryName
+                                </h5>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="small">
+                                            <strong>$@budget.AmountSpent.ToString("N2")</strong> of $@budget.LimitAmount.ToString("N2")
+                                        </span>
+                                        <span class="small @(budget.IsOverBudget ? "text-danger" : "text-success")">
+                                            @(budget.IsOverBudget ? "Over budget!" : "$" + budget.Remaining.ToString("N2") + " remaining")
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="progress" style="height: 30px;">
+                                    <div class="progress-bar @(budget.IsOverBudget ? "bg-danger" : "bg-success")" 
+                                         role="progressbar" 
+                                         style="width: @Math.Min(budget.PercentageUsed, 100)%; background-color: @budget.ColorCode !important;"
+                                         aria-valuenow="@budget.PercentageUsed" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                        <strong>@budget.PercentageUsed.ToString("N0")%</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-end">
+                                <a href="@Url.Action("Edit", "Budget", new { id = budget.BudgetId })" 
+                                   class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <button onclick="deleteBudget(@budget.BudgetId)" 
+                                        class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No budgets set for this month</p>
+                <a href="@Url.Action("Create", "Budget")" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Create Your First Budget
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        // Delete budget function
+        function deleteBudget(id) {
+            if (confirm('Are you sure you want to delete this budget?')) {
+                $.ajax({
+                    url: '@Url.Action("Delete", "Budget")',
+                    type: 'POST',
+                    data: { id: id },
+                    success: function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function() {
+                        alert('An error occurred while deleting the budget');
+                    }
+                });
+            }
+        }
+    </script>
+}

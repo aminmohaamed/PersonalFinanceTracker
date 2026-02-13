@@ -1,0 +1,241 @@
+@model PersonalFinanceTracker.ViewModels.DashboardViewModel
+@{
+    ViewBag.Title = "Dashboard";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-fluid">
+    <!-- Financial Summary Cards -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card balance">
+                <div class="card-body">
+                    <div class="stat-label">
+                        <i class="fas fa-wallet"></i> Total Balance
+                    </div>
+                    <div class="stat-value" style="color: #36b9cc;">
+                        $@Model.TotalBalance.ToString("N2")
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card income">
+            <div class="card-body">
+                <div class="stat-label">
+                    <i class="fas fa-arrow-up"></i> Monthly Income
+                </div>
+                <div class="stat-value" style="color: #1cc88a;">
+                    $@Model.MonthlyIncome.ToString("N2")
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card expense">
+            <div class="card-body">
+                <div class="stat-label">
+                    <i class="fas fa-arrow-down"></i> Monthly Expenses
+                </div>
+                <div class="stat-value" style="color: #e74a3b;">
+                    $@Model.MonthlyExpenses.ToString("N2")
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card savings">
+            <div class="card-body">
+                <div class="stat-label">
+                    <i class="fas fa-piggy-bank"></i> Monthly Savings
+                </div>
+                <div class="stat-value" style="color: #f6c23e;">
+                    $@Model.MonthlySavings.ToString("N2")
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Spending by Category Chart -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-pie"></i> Spending by Category
+            </div>
+            <div class="card-body">
+                <canvas id="expensesPieChart" width="400" height="400"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Budget Progress -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-tasks"></i> Budget Progress
+            </div>
+            <div class="card-body">
+                @if (Model.BudgetProgress.Any())
+                {
+                    foreach (var budget in Model.BudgetProgress.Take(5))
+                    {
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span><strong>@budget.CategoryName</strong></span>
+                                <span class="@(budget.IsOverBudget ? "text-danger" : "")">
+                                    $@budget.AmountSpent.ToString("N2") / $@budget.BudgetLimit.ToString("N2")
+                                </span>
+                            </div>
+                            <div class="progress" style="height: 25px;">
+                                <div class="progress-bar @(budget.IsOverBudget ? "bg-danger" : "bg-success")" 
+                                     role="progressbar" 
+                                     style="width: @Math.Min(budget.PercentageUsed, 100)%; background-color: @budget.ColorCode !important;"
+                                     aria-valuenow="@budget.PercentageUsed" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    @budget.PercentageUsed.ToString("N0")%
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="text-muted text-center">
+                        <i class="fas fa-info-circle"></i> No budgets set. 
+                        <a href="@Url.Action("Create", "Budget")">Create your first budget</a>
+                    </p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Transactions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-list"></i> Recent Transactions</span>
+                <a href="@Url.Action("Index", "Transaction")" class="btn btn-sm btn-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                @if (Model.RecentTransactions.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Category</th>
+                                    <th>Type</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var transaction in Model.RecentTransactions)
+                                {
+                                    <tr>
+                                        <td>@transaction.Date.ToString("MMM dd, yyyy")</td>
+                                        <td>@transaction.Description</td>
+                                        <td>
+                                            <span class="badge" style="background-color: @transaction.Category.ColorCode;">
+                                                <i class="fas @transaction.Category.Icon"></i> @transaction.Category.Name
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if (transaction.Type == PersonalFinanceTracker.Models.TransactionType.Income)
+                                            {
+                                                <span class="badge bg-success">Income</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger">Expense</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <strong class="@(transaction.Type == PersonalFinanceTracker.Models.TransactionType.Income ? "text-success" : "text-danger")">
+                                                @(transaction.Type == PersonalFinanceTracker.Models.TransactionType.Income ? "+" : "-")$@transaction.Amount.ToString("N2")
+                                            </strong>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted text-center">
+                        <i class="fas fa-info-circle"></i> No transactions yet. 
+                        <a href="@Url.Action("Create", "Transaction")">Add your first transaction</a>
+                    </p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        $(document).ready(function() {
+            // Pie Chart for Expenses by Category
+            @if (Model.ExpensesByCategory.Any())
+            {
+                var percentages = @Html.Raw(Json.Encode(Model.ExpensesByCategory.Select(c => c.Percentage).ToList()));
+                <text>
+                var ctx = document.getElementById('expensesPieChart').getContext('2d');
+                var expensesPieChart = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: [@Html.Raw(string.Join(",", Model.ExpensesByCategory.Select(c => "'" + c.CategoryName + "'")))],
+                        datasets: [{
+                            data: [@Html.Raw(string.Join(",", Model.ExpensesByCategory.Select(c => c.Amount)))],
+                            backgroundColor: [@Html.Raw(string.Join(",", Model.ExpensesByCategory.Select(c => "'" + c.ColorCode + "'")))],
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(item) {
+                                        var label = item.label || '';
+                                        var value = item.raw || 0;
+                                        var pct = percentages[item.dataIndex];
+                                        return label + ': $' + value.toFixed(2) + ' (' + pct.toFixed(1) + '%)';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                </text>
+            }
+            else
+            {
+                <text>
+                var ctx = document.getElementById('expensesPieChart').getContext('2d');
+                ctx.font = '16px Arial';
+                ctx.fillStyle = '#999';
+                ctx.textAlign = 'center';
+                ctx.fillText('No expense data available', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                </text>
+            }
+        });
+    </script>
+}
+</div>
+
